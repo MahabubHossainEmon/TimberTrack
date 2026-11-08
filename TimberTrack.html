@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>কাঠের হিসাব - এডমিন প্যানেল</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+    body { background: #f0fdf4; color: #1f2937; padding: 12px; }
+    .container { max-width: 850px; margin: auto; }
+    
+    /* এডমিন লগইন কার্ড */
+    #loginScreen { max-width: 380px; margin: 70px auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    #loginScreen h2 { color: #15803d; text-align: center; margin-bottom: 4px; }
+    #loginScreen p { text-align: center; font-size: 0.85rem; color: #6b7280; margin-bottom: 15px; }
+    
+    .top-bar { display: flex; justify-content: space-between; align-items: center; background: #15803d; color: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 15px; }
+    .card { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; }
+    h2 { font-size: 1.1rem; color: #166534; margin-bottom: 12px; border-bottom: 2px solid #bbf7d0; padding-bottom: 4px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+    input, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; }
+    
+    .btn { padding: 9px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-align: center; }
+    .btn-green { background: #16a34a; color: white; width: 100%; font-size: 1rem; }
+    .btn-blue { background: #0284c7; color: white; }
+    .btn-red { background: #dc2626; color: white; font-size: 0.85rem; }
+    
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
+    .summary-box { padding: 12px 6px; border-radius: 8px; text-align: center; }
+    .box-sale { background: #e0f2fe; color: #0369a1; }
+    .box-paid { background: #dcfce7; color: #15803d; }
+    .box-due { background: #fee2e2; color: #b91c1c; }
+    .box-profit { background: #fef08a; color: #854d0e; }
+    .summary-box span { display: block; font-size: 0.75rem; font-weight: bold; }
+    .summary-box strong { font-size: 1.05rem; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #e5e7eb; padding: 7px; text-align: left; font-size: 0.8rem; }
+    th { background: #f9fafb; }
+    .profit-text { color: #16a34a; font-weight: bold; }
+    .loss-text { color: #dc2626; font-weight: bold; }
+    .badge-due { color: #dc2626; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<!-- এডমিন লগইন পেজ -->
+<div id="loginScreen">
+  <h2>এডমিন লগইন</h2>
+  <p>কাঠের ব্যবসা ব্যবস্থাপনা সফটওয়্যার</p>
+  
+  <label>ইউজারনেম (Username)</label>
+  <input type="text" id="loginUser" value="admin" placeholder="admin">
+  
+  <label>পাসওয়ার্ড (Password)</label>
+  <input type="password" id="loginPass" placeholder="পাসওয়ার্ড লিখুন" onkeypress="if(event.key==='Enter') processLogin()">
+  
+  <button class="btn btn-green" type="button" onclick="processLogin()">লগইন করুন</button>
+  
+  <div style="margin-top: 15px; background: #f3f4f6; padding: 10px; border-radius: 6px; font-size: 0.8rem; color: #4b5563;">
+    <strong>সঠিক তথ্য:</strong><br>
+    ইউজারনেম: <code>admin</code><br>
+    পাসওয়ার্ড: <code>1234</code>
+  </div>
+</div>
+
+<!-- মূল ড্যাশবোর্ড -->
+<div class="container" id="mainDashboard" style="display: none;">
+  <div class="top-bar">
+    <div>
+      <h1 style="font-size: 1.25rem;">কাঠের হিসাব ও অডিট প্যানেল</h1>
+      <small>লগইন আছেন: <strong id="currentUserDisplay" style="color: #fef08a;">admin</strong></small>
+    </div>
+    <div>
+      <button class="btn" style="background: #e2e8f0; font-size: 0.8rem; margin-right: 5px;" onclick="showAccountSettings()">এডমিন সেটিংস</button>
+      <button class="btn btn-red" onclick="logoutAdmin()">লগআউট</button>
+    </div>
+  </div>
+
+  <!-- ফিল্টার -->
+  <div class="card" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+    <h2>📅 বাৎসরিক ও মাসিক রিপোর্ট ফিল্টার</h2>
+    <div style="display: flex; gap: 10px;">
+      <div style="flex: 1;">
+        <label>বছর নির্বাচন করুন</label>
+        <select id="yearFilter" onchange="renderData()">
+          <option value="ALL">সকল বছর</option>
+          <option value="2026" selected>২০২৬</option>
+          <option value="2025">২০২৫</option>
+          <option value="2027">২০২৭</option>
+        </select>
+      </div>
+      <div style="flex: 1;">
+        <label>মাস নির্বাচন করুন</label>
+        <select id="monthFilter" onchange="renderData()">
+          <option value="ALL">পুরো বছর (সব মাস)</option>
+          <option value="01">জানুয়ারি</option>
+          <option value="02">ফেব্রুয়ারি</option>
+          <option value="03">মার্চ</option>
+          <option value="04">এপ্রিল</option>
+          <option value="05">মে</option>
+          <option value="06">জুন</option>
+          <option value="07">জুলাই</option>
+          <option value="08">আগস্ট</option>
+          <option value="09">সেপ্টেম্বর</option>
+          <option value="10">অক্টোবর</option>
+          <option value="11">নভেম্বর</option>
+          <option value="12">ডিসেম্বর</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- লাভ-লস ও সারসংক্ষেপ -->
+  <div class="summary-grid">
+    <div class="summary-box box-sale">
+      <span>মোট বিক্রি</span>
+      <strong id="statSale">৳ 0</strong>
+    </div>
+    <div class="summary-box box-paid">
+      <span>মোট জমা (ক্যাশ)</span>
+      <strong id="statPaid">৳ 0</strong>
+    </div>
+    <div class="summary-box box-due">
+      <span>মোট বাকি</span>
+      <strong id="statDue">৳ 0</strong>
+    </div>
+    <div class="summary-box box-profit">
+      <span>মোট লাভ / লস</span>
+      <strong id="statProfit">৳ 0</strong>
+    </div>
+  </div>
+
+  <!-- নতুন এন্ট্রি ফরম -->
+  <div class="card">
+    <h2>নতুন বিক্রি ও খরচ এন্ট্রি</h2>
+    <div style="display: flex; gap: 8px;">
+      <div style="flex: 2;">
+        <label>কাস্টমারের নাম</label>
+        <input type="text" id="custName" placeholder="উদাঃ রহিম ব্যাপারী">
+      </div>
+      <div style="flex: 1;">
+        <label>তারিখ</label>
+        <input type="date" id="saleDate">
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+      <div style="flex: 1;">
+        <label>কাঠের ধরন</label>
+        <select id="woodType">
+          <option value="মেহগনি">মেহগনি</option>
+          <option value="সেগুন">সেগুন</option>
+          <option value="কড়ই">কড়ই</option>
+          <option value="রেন্ডি / রেইনট্রি">রেন্ডি / রেইনট্রি</option>
+          <option value="শাল">শাল</option>
+          <option value="অন্যান্য">অন্যান্য</option>
+        </select>
+      </div>
+      <div style="flex: 1;">
+        <label>পরিমাণ ও একক</label>
+        <div style="display: flex; gap: 4px;">
+          <input type="number" id="qty" placeholder="পরিমাণ" step="any">
+          <select id="unit" style="width: 90px;">
+            <option value="CFT">সিএফটি</option>
+            <option value="Pcs">পিস</option>
+            <option value="ফুট">ফুট</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+      <div style="flex: 1;">
+        <label>ক্রয়মূল্য / খরচ (৳)</label>
+        <input type="number" id="costAmount" placeholder="কেনা দাম" oninput="calculateAuto()">
+      </div>
+      <div style="flex: 1;">
+        <label>বিক্রয়মূল্য (৳)</label>
+        <input type="number" id="saleAmount" placeholder="মোট দাম" oninput="calculateAuto()">
+      </div>
+      <div style="flex: 1;">
+        <label>জমা (৳)</label>
+        <input type="number" id="paidAmount" placeholder="নগদ" oninput="calculateAuto()">
+      </div>
+      <div style="flex: 1;">
+        <label>বাকি টাকা (৳)</label>
+        <input type="number" id="dueAmount" readonly style="background: #fee2e2; font-weight: bold; color: #b91c1c;">
+      </div>
+    </div>
+
+    <button class="btn btn-green" onclick="addSale()">হিসাব সংরক্ষণ করুন</button>
+  </div>
+
+  <!-- হিসাব খতিয়ান ও ডাউনলোড -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <h2>বিক্রি ও লাভ-লসের খতিয়ান</h2>
+      <button class="btn btn-blue" onclick="exportCSV()">📥 এক্সেল / CSV ডাউনলোড</button>
+    </div>
+    
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>তারিখ</th>
+            <th>কাস্টমার</th>
+            <th>কাঠ</th>
+            <th>কেনা দাম</th>
+            <th>বিক্রি দাম</th>
+            <th>জমা</th>
+            <th>বাকি</th>
+            <th>লাভ / লস</th>
+            <th>অ্যাকশন</th>
+          </tr>
+        </thead>
+        <tbody id="salesBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ব্রাউজার স্টোরেজ থেকে পাসওয়ার্ড লোড (না থাকলে ডিফল্ট সেট)
+  let trueUser = localStorage.getItem('admin_user') || 'admin';
+  let truePass = localStorage.getItem('admin_password') || '1234';
+
+  let sales = JSON.parse(localStorage.getItem('kather_hisab_v4') || '[]');
+  document.getElementById('saleDate').value = new Date().toISOString().split('T')[0];
+
+  function processLogin() {
+    const userIn = document.getElementById('loginUser').value.trim();
+    const passIn = document.getElementById('loginPass').value.trim();
+
+    // চেক করা
+    if (userIn === trueUser && passIn === truePass) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainDashboard').style.display = 'block';
+      document.getElementById('currentUserDisplay').innerText = trueUser;
+      renderData();
+    } else {
+      alert('ভুল তথ্য! সঠিক ইউজারনেম: admin এবং পাসওয়ার্ড: 1234');
+    }
+  }
+
+  function logoutAdmin() {
+    document.getElementById('loginPass').value = '';
+    document.getElementById('mainDashboard').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'block';
+  }
+
+  function showAccountSettings() {
+    const current = prompt('বর্তমান পাসওয়ার্ড দিন:');
+    if (current !== truePass) {
+      alert('বর্তমান পাসওয়ার্ড ভুল!');
+      return;
+    }
+
+    const newUser = prompt('নতুন ইউজারনেম দিন:', trueUser);
+    if (!newUser || !newUser.trim()) return;
+
+    const newPass = prompt('নতুন পাসওয়ার্ড দিন:');
+    if (!newPass || !newPass.trim()) return;
+
+    trueUser = newUser.trim();
+    truePass = newPass.trim();
+
+    localStorage.setItem('admin_user', trueUser);
+    localStorage.setItem('admin_password', truePass);
+    document.getElementById('currentUserDisplay').innerText = trueUser;
+    alert('ইউজারনেম ও পাসওয়ার্ড সফলভাবে পরিবর্তিত হয়েছে!');
+  }
+
+  function calculateAuto() {
+    const total = Number(document.getElementById('saleAmount').value) || 0;
+    const paid = Number(document.getElementById('paidAmount').value) || 0;
+    document.getElementById('dueAmount').value = Math.max(0, total - paid);
+  }
+
+  function renderData() {
+    const tbody = document.getElementById('salesBody');
+    tbody.innerHTML = '';
+
+    const selYear = document.getElementById('yearFilter').value;
+    const selMonth = document.getElementById('monthFilter').value;
+
+    let totSale = 0, totPaid = 0, totDue = 0, totProfit = 0;
+
+    const filtered = sales.filter(s => {
+      const parts = s.date.split('-');
+      const year = parts[0];
+      const month = parts[1];
+      const yearMatch = (selYear === 'ALL' || year === selYear);
+      const monthMatch = (selMonth === 'ALL' || month === selMonth);
+      return yearMatch && monthMatch;
+    });
+
+    filtered.forEach((s) => {
+      const actualIdx = sales.indexOf(s);
+      const profit = s.sale - s.cost;
+
+      totSale += s.sale;
+      totPaid += s.paid;
+      totDue += s.due;
+      totProfit += profit;
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${s.date}</td>
+        <td><strong>${s.customer}</strong></td>
+        <td>${s.wood} (${s.qty} ${s.unit})</td>
+        <td>৳ ${s.cost}</td>
+        <td>৳ ${s.sale}</td>
+        <td style="color:#16a34a; font-weight:bold;">৳ ${s.paid}</td>
+        <td class="${s.due > 0 ? 'badge-due' : ''}">৳ ${s.due}</td>
+        <td class="${profit >= 0 ? 'profit-text' : 'loss-text'}">${profit >= 0 ? '+৳ ' + profit : '-৳ ' + Math.abs(profit)}</td>
+        <td>
+          ${s.due > 0 ? `<button onclick="collectDue(${actualIdx})" style="background:#f59e0b; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer;">বাকি জমা</button>` : ''}
+          <span onclick="deleteSale(${actualIdx})" style="color:red; cursor:pointer; font-weight:bold; margin-left:4px;">মুছুন</span>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+
+    document.getElementById('statSale').innerText = '৳ ' + totSale.toLocaleString();
+    document.getElementById('statPaid').innerText = '৳ ' + totPaid.toLocaleString();
+    document.getElementById('statDue').innerText = '৳ ' + totDue.toLocaleString();
+    
+    const profitEl = document.getElementById('statProfit');
+    profitEl.innerText = (totProfit >= 0 ? '+৳ ' : '-৳ ') + Math.abs(totProfit).toLocaleString();
+    profitEl.style.color = totProfit >= 0 ? '#15803d' : '#b91c1c';
+  }
+
+  function addSale() {
+    const cust = document.getElementById('custName').value.trim();
+    const date = document.getElementById('saleDate').value;
+    const wood = document.getElementById('woodType').value;
+    const qty = document.getElementById('qty').value.trim();
+    const unit = document.getElementById('unit').value;
+    const cost = Number(document.getElementById('costAmount').value) || 0;
+    const sale = Number(document.getElementById('saleAmount').value);
+    const paid = Number(document.getElementById('paidAmount').value) || 0;
+
+    if (!cust || !qty || isNaN(sale) || sale <= 0) {
+      alert('কাস্টমারের নাম, পরিমাণ এবং বিক্রয়মূল্য সঠিকভাবে লিখুন!');
+      return;
+    }
+
+    sales.unshift({
+      customer: cust,
+      date: date,
+      wood: wood,
+      qty: qty,
+      unit: unit,
+      cost: cost,
+      sale: sale,
+      paid: paid,
+      due: Math.max(0, sale - paid)
+    });
+
+    localStorage.setItem('kather_hisab_v4', JSON.stringify(sales));
+
+    document.getElementById('custName').value = '';
+    document.getElementById('qty').value = '';
+    document.getElementById('costAmount').value = '';
+    document.getElementById('saleAmount').value = '';
+    document.getElementById('paidAmount').value = '';
+    document.getElementById('dueAmount').value = '';
+
+    renderData();
+  }
+
+  function collectDue(index) {
+    const item = sales[index];
+    const amountStr = prompt(`"${item.customer}" এর বাকি আছে ৳ ${item.due}। কত টাকা পরিশোধ করলেন?`);
+    if (amountStr === null) return;
+    const amt = Number(amountStr);
+    if (isNaN(amt) || amt <= 0 || amt > item.due) {
+      alert('সঠিক টাকার অংক লিখুন!');
+      return;
+    }
+    item.paid += amt;
+    item.due -= amt;
+    localStorage.setItem('kather_hisab_v4', JSON.stringify(sales));
+    renderData();
+  }
+
+  function deleteSale(index) {
+    if (confirm('আপনি কি এই হিসাবটি মুছে ফেলতে চান?')) {
+      sales.splice(index, 1);
+      localStorage.setItem('kather_hisab_v4', JSON.stringify(sales));
+      renderData();
+    }
+  }
+
+  function exportCSV() {
+    if (sales.length === 0) {
+      alert('কোনো ডাটা নেই!');
+      return;
+    }
+    let csv = '\uFEFFতারিখ,কাস্টমার,কাঠের ধরন,পরিমাণ,একক,ক্রয়মূল্য,বিক্রয়মূল্য,জমা,বাকি,লাভ/লস\n';
+    sales.forEach(s => {
+      const prof = s.sale - s.cost;
+      csv += `"${s.date}","${s.customer}","${s.wood}","${s.qty}","${s.unit}","${s.cost}","${s.sale}","${s.paid}","${s.due}","${prof}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `kather_audit_report.csv`;
+    link.click();
+  }
+</script>
+
+</body>
+</html>
